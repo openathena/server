@@ -1,6 +1,6 @@
 Athena
 ====
-[![Build Status](https://img.shields.io/badge/build-unknown-lightgrey.svg)](https://travis-ci.org/openathena/server)
+[![Build Status](https://travis-ci.org/openathena/server.svg?branch=master)](https://travis-ci.org/openathena/server)
 ## Documentation
 
 http://openathena.github.io/docs/server (coming soon...)
