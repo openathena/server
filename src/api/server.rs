@@ -6,13 +6,13 @@ use super::error_handlers;
 use api;
 use rocket;
 
-pub struct ApiServer {
+pub struct Server {
 	game: Arc<Mutex<Game>>
 }
 
-impl ApiServer {
-	pub fn new(game: Arc<Mutex<Game>>) -> ApiServer {
-		ApiServer { game }
+impl Server {
+	pub fn new(game: Arc<Mutex<Game>>) -> Server {
+		Server { game }
 	}
 	pub fn start(self) {
 		rocket::ignite()

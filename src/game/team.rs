@@ -1,45 +1,46 @@
 use rand::{thread_rng, Rng};
 
-use api::model::TeamInfo;
+use super::actions::CreateTeam;
 
-pub struct Team{
+pub struct Team {
 	id: String,
 	name: String,
 	password: String
 }
 
-impl Team{
-	pub fn new(name: &str, password: &str) -> Team{
-		Team{
-			id: Self::generate_id(),
-			name: name.to_owned(),
-			password: password.to_owned()
+impl Team {
+	pub fn new(info: CreateTeam) -> Team {
+		Team {
+			id: info.id,
+			name: info.name,
+			password: info.password
 		}
 	}
 
-	pub fn get_id(&self) -> String{
+	pub fn create_event(name: &str, password: &str) -> CreateTeam {
+		CreateTeam {
+			id: Self::generate_id(),
+			name: name.to_owned(),
+			password: password.to_owned(),
+		}
+	}
+
+	pub fn get_id(&self) -> String {
 		self.id.clone()
 	}
 
-	pub fn get_name(&self) -> String{
+	pub fn get_name(&self) -> String {
 		self.name.clone()
 	}
 
-	pub fn check_password(&self, password: &str) -> bool{
-		self.password == password //TODO: timing attack?
+	pub fn check_password(&self, password: &str) -> bool {
+		self.password == password //TODO: fix timing attack
 	}
 
-	fn generate_id() -> String{
+	fn generate_id() -> String {
 		thread_rng()
 				.gen_ascii_chars()
 				.take(24)
 				.collect::<String>()
-	}
-
-	pub fn get_info(&self) -> TeamInfo{
-		TeamInfo{
-			id: self.get_id(),
-			name: self.get_name()
-		}
 	}
 }

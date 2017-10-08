@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, conservative_impl_trait)]
 #![plugin(rocket_codegen)]
 
 extern crate rocket;
@@ -8,13 +8,14 @@ extern crate rocket_contrib;
 extern crate serde_derive;
 extern crate rand;
 extern crate ws;
+extern crate serde_json;
 
 mod game;
 mod api;
-mod ws_server;
+mod websocket;
 
-use api::server::ApiServer;
-use ws_server::WsServer;
+use api::server::Server as ApiServer;
+use websocket::server::Server as WsServer;
 
 use game::Game;
 use std::sync::{Arc, Mutex};

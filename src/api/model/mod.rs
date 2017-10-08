@@ -1,11 +1,10 @@
 #[derive(Deserialize)]
-pub struct CreateTeamRequest{
+pub struct CreateTeamRequest {
 	pub name: String,
 	pub password: String
 }
 
 #[derive(Serialize)]
-pub struct TeamInfo{
-	pub id: String,
-	pub name: String
+pub struct CreateTeamResponse {
+	pub team_id: String
 }

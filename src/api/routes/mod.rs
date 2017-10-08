@@ -1,7 +1,22 @@
-pub mod team;
+use rocket_contrib::Json;
+use rocket::{Route, State};
+use std::sync::{Arc, Mutex};
+use game::{Game, Team};
+use game::actions::Action;
+use api::model::*;
 
-use rocket::Route;
+type GameMutex = Arc<Mutex<Game>>;
+
+#[post("/teams", data = "<request>")]
+fn create_team(request: Json<CreateTeamRequest>, game: State<GameMutex>) -> Json<CreateTeamResponse> {
+	let event = Team::create_event(&request.name, &request.password);
+	let team_id = event.id.clone();
+	game.lock().unwrap().execute_action(Action::CreateTeam(event));
+	Json(CreateTeamResponse { team_id })
+}
 
 pub fn get_routes() -> Vec<Route> {
-	team::get_routes()
+	routes![
+		create_team
+	]
 }
