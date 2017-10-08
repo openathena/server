@@ -2,8 +2,8 @@ Athena
 ====
 [![Build Status](https://travis-ci.org/openathena/server.svg?branch=master)](https://travis-ci.org/openathena/server)
 ## Documentation
+https://github.com/openathena/server/wiki
 
-http://openathena.github.io/docs/server (coming soon...)
 
 ## Installation
  - Install rust, if not already installed: `curl https://sh.rustup.rs -sSf | sh`
