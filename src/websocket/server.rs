@@ -114,9 +114,11 @@ impl Handler {
 					Self::is_visible(auth_type, &visible_event.get_visibility())
 				}).for_each(|visible_event| {
 					let message = Message::Event(visible_event.get_event());
-					let history = Message::History(vec!(message));//TODO: batch up history events
+					let history = Message::History(vec!(message));//TODO: batch up history messages
 					sender.send(ws::Message::text(serde_json::to_string(&history).unwrap()));//TODO: handle errors here
 				});
+				let empty_history = Message::History(vec!());//this marks the end of history messages
+				sender.send(ws::Message::text(serde_json::to_string(&empty_history).unwrap()));//TODO: handle errors here
 
 				//listen for all future events
 				game.add_event_listener(Self::filter_visible_events(auth_type.clone(), move |event| {
