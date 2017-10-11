@@ -18,3 +18,12 @@ https://github.com/openathena/server/wiki
 
 #### Production
 `ROCKET_ENV=production cargo run --release`
+
+## Troubleshooting
+If the code won't compile or the server won't start, try updating rust and all the dependencies.
+Since we are running on rust nightly this will occasionally be required.
+ - `rustup update` (update rust)
+ - `cargo update` updates Cargo.lock with the latest dependencies from Cargo.toml
+ 
+ If any dependencies were updated (Cargo.lock file changed) please open a PR with the updates
+ 
