@@ -4,6 +4,7 @@ mod team;
 mod world;
 pub mod actions;
 pub mod events;
+pub mod hex_grid;
 
 use self::actions::Action;
 use self::events::*;
@@ -22,7 +23,7 @@ impl Game {
 	pub fn new() -> Game {
 		Game {
 			teams: HashMap::new(),
-			world: World::new(16, 16),
+			world: World::new(8),
 			event_history: Vec::new(),
 			event_listeners: Vec::new()
 		}

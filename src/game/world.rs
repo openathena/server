@@ -1,44 +1,39 @@
+use super::hex_grid::*;
 
 #[derive(Copy, Clone)]
-pub enum Tile {
+pub struct Tile {
+	tile_type: TileType
+}
+
+#[derive(Copy, Clone)]
+pub enum TileType {
 	Water,
 	Land
 }
 
 
 pub struct World {
-	width: u32,
-	height: u32,
-	tiles: Vec<Tile>
+	/** distance from center to edge of map (Hexagon shape map) */
+	radius: u16,
+	grid: HexGrid<Tile>
 }
 
 impl World {
-	pub fn new(width: u32, height: u32) -> World {
+	pub fn new(radius: u16) -> World {
 		let mut world = World {
-			width,
-			height,
-			tiles: Vec::new()
+			radius,
+			grid: HexGrid::new()
 		};
 		world.init();
 		world
 	}
 
-	pub fn set_tile(&mut self, x: u32, y: u32, tile: Tile) {
-		let index = self.tile_index(x, y);
-		self.tiles[index] = tile;
-	}
-
-	pub fn get_tile(&self, x: u32, y: u32) -> Tile {
-		self.tiles[self.tile_index(x, y)]
-	}
-
-	fn tile_index(&self, x: u32, y: u32) -> usize{
-		(y * self.width + x) as usize
-	}
-
 	fn init(&mut self) {
-		for index in 0..(self.width*self.height){
-			self.tiles.push(Tile::Water);
-		}
+		let default_tile = Tile {
+			tile_type: TileType::Water
+		};
+		(Offset::fill_hex(self.radius) + CENTER).iter().for_each(|coord| {
+			self.grid.set(*coord, default_tile.clone())
+		})
 	}
 }
