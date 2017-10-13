@@ -55,12 +55,7 @@ impl Handler {
 		return None;
 	}
 
-	//	fn event_auth_filter<F>(auth_type: AuthType, listener: F)
-	//		where F: FnMut(VisibleEvent) + Send + 'static {
-	//
-	//	}
-
-	fn is_visible(auth_type: &AuthType, visibility: &Visibility) -> bool {
+	fn is_visible(_auth_type: &AuthType, _visibility: &Visibility) -> bool {
 		true // only visibility is 'public' right now
 	}
 
@@ -90,14 +85,6 @@ impl Handler {
 			Request::Observe => {
 				self.auth_type = Some(AuthType::Observer);
 				self.setup_event_stream();
-
-				//				self.game.lock().unwrap().add_event_listener(move |visible_event| {
-				//					if visible_event.get_visibility() == Visibility::Public {
-				//						let message = serde_json::to_string(&Message::Event(visible_event.get_event())).unwrap();
-				//						sender.send(ws::Message::text(message));
-				//					}
-				//				});
-
 				Ok(())
 			}
 		}

@@ -1,16 +1,13 @@
 use std::collections::HashMap;
 
-mod team;
-mod world;
-pub mod actions;
+pub mod team;
+pub mod world;
 pub mod events;
 pub mod hex_grid;
 
-use self::actions::Action;
 use self::events::*;
 pub use self::team::Team;
 use self::world::World;
-use std::sync::Arc;
 
 pub struct Game {
 	teams: HashMap<String, Team>,
@@ -29,20 +26,6 @@ impl Game {
 		}
 	}
 
-	pub fn execute_action(&mut self, action: Action) -> Result<(), ()> {
-		match action.clone() {
-			Action::CreateTeam(info) => {
-				let team = Team::new(info.clone());
-				self.teams.insert(team.get_id().to_owned(), team);
-				self.generate_event(Visibility::Public, Event::TeamCreated(TeamCreated {
-					id: info.id,
-					name: info.name,
-				}));
-				Ok(())
-			}
-		}
-	}
-
 	fn generate_event(&mut self, visibility: Visibility, event: Event) {
 		let visible_event = VisibleEvent::new(visibility, event);
 
@@ -51,6 +34,14 @@ impl Game {
 		}
 
 		self.event_history.push(visible_event);
+	}
+
+	pub fn add_team(&mut self, team: Team) {
+		self.teams.insert(team.get_id().to_owned(), team.clone());
+		self.generate_event(Visibility::Public, Event::TeamCreated(TeamCreated {
+			id: team.get_id(),
+			name: team.get_name(),
+		}));
 	}
 
 	pub fn get_team(&self, id: &str) -> Option<&Team> {

@@ -1,6 +1,5 @@
 use std::i32;
 use std::ops::{Add, Mul, Neg, Sub};
-use std::cmp::Ordering;
 use super::Coordinate;
 
 pub const ZERO_OFFSET: Offset = Offset { x: 0, y: 0 };

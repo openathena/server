@@ -1,4 +1,3 @@
-pub mod model;
-pub mod routes;
+pub mod route;
 pub mod error_handlers;
 pub mod server;

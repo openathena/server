@@ -4,8 +4,6 @@ pub mod coordinate;
 
 pub use self::coordinate::*;
 
-use std::convert::From;
-use std::ops::{Index, IndexMut, Add};
 use std::collections::HashMap;
 
 

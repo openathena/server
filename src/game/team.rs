@@ -1,7 +1,6 @@
 use rand::{thread_rng, Rng};
 
-use super::actions::CreateTeam;
-
+#[derive(Clone)]
 pub struct Team {
 	id: String,
 	name: String,
@@ -9,19 +8,11 @@ pub struct Team {
 }
 
 impl Team {
-	pub fn new(info: CreateTeam) -> Team {
+	pub fn new(name: &str, password: &str) -> Team {
 		Team {
-			id: info.id,
-			name: info.name,
-			password: info.password
-		}
-	}
-
-	pub fn create_event(name: &str, password: &str) -> CreateTeam {
-		CreateTeam {
 			id: Self::generate_id(),
 			name: name.to_owned(),
-			password: password.to_owned(),
+			password: password.to_owned()
 		}
 	}
 
