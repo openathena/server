@@ -2,9 +2,10 @@ use ws::{self, Sender};
 use game::Game;
 use std::sync::{Arc, Mutex};
 use serde_json;
-use super::request::{Request, AuthRequest};
+use super::request::Request;
 use super::message::Message;
-use game::events::{Event, Visibility, VisibleEvent};
+use api::error_handlers::{ApiErrorType, ApiError};
+use game::auth::AuthType;
 
 const PORT: u16 = 43202;
 
@@ -26,103 +27,95 @@ impl Server {
 	}
 }
 
-#[derive(Clone)]
-enum AuthType {
-	Observer,
-	Team(String)
-}
-
 struct Handler {
 	game: Arc<Mutex<Game>>,
-	auth_type: Option<AuthType>,
-	sender: Sender
+	auth_type: AuthType,
+	sender: Sender,
+	listener_id: Option<String>
 }
 
 impl Handler {
 	pub fn new(game: Arc<Mutex<Game>>, sender: Sender) -> Handler {
 		Handler {
 			game,
-			auth_type: None,
-			sender
-		}
-	}
-	fn authenticate_team(&mut self, auth_request: AuthRequest) -> Option<String> {
-		if let Some(team) = self.game.lock().unwrap().get_team(&auth_request.team_id) {
-			if team.check_password(&auth_request.password) {
-				return Some(team.get_id());
-			}
-		}
-		return None;
-	}
-
-	fn is_visible(_auth_type: &AuthType, _visibility: &Visibility) -> bool {
-		true // only visibility is 'public' right now
-	}
-
-	fn filter_visible_events<F: FnMut(Event)>(auth_type: AuthType, mut listener: F) -> impl FnMut(VisibleEvent) {
-		move |visible_event: VisibleEvent| {
-			if Self::is_visible(&auth_type, &visible_event.get_visibility()) {
-				listener(visible_event.get_event());
-			}
+			auth_type: AuthType::Observer,
+			sender,
+			listener_id: None
 		}
 	}
 
-	fn handle_request(&mut self, request: Request) -> ws::Result<()> {
-		if self.auth_type.is_some() {
-			return Err(ws::Error::new(ws::ErrorKind::Protocol, "Already Authenticated"));
+	fn shutdown_event_stream(&mut self) -> bool {
+		if let Some(team_id) = self.listener_id.take() {
+			self.game.lock().unwrap().remove_event_listener(&team_id);
+			true
+		}else{
+			false
+		}
+	}
+
+	fn handle_request(&mut self, msg: &str) -> Result<(), ApiError> {
+		let request: Request = serde_json::from_str(msg).map_err(|_| {
+			ApiError::new(ApiErrorType::BadRequest, "Invalid Request")
+		})?;
+		if self.shutdown_event_stream() {
+			Self::send_message(&self.sender, &Message::Reset)
 		}
 		match request {
 			Request::Auth(auth_request) => {
-				match self.authenticate_team(auth_request) {
-					Some(team_id) => {
-						self.auth_type = Some(AuthType::Team(team_id));
-						self.setup_event_stream();
-						Ok(())
-					}
-					None => Err(ws::Error::new(ws::ErrorKind::Protocol, "Authentication Failed"))
-				}
+				let credentials = Some((auth_request.username.as_ref(), auth_request.password.as_ref()));
+				self.auth_type = self.game.lock().unwrap().auth(credentials)?;
 			}
 			Request::Observe => {
-				self.auth_type = Some(AuthType::Observer);
-				self.setup_event_stream();
-				Ok(())
+				self.auth_type = self.game.lock().unwrap().auth(None)?;
 			}
 		}
+		self.setup_event_stream();
+		Ok(())
 	}
+
+	fn send_message(sender: &ws::Sender, msg: &Message) {
+		let _err = sender.send(ws::Message::text(serde_json::to_string(&msg).unwrap()));
+	}
+
 	fn setup_event_stream(&mut self) {
-		if let Some(ref auth_type) = self.auth_type {
-			let sender = self.sender.clone();
+		let sender = self.sender.clone();
+		let mut game = self.game.lock().unwrap();
 
-			{
-				let mut game = self.game.lock().unwrap();
-
-				//send all existing events as "History" messages
-				game.get_event_history().iter().filter(|visible_event| {
-					Self::is_visible(auth_type, &visible_event.get_visibility())
-				}).for_each(|visible_event| {
+		//send all existing events as "History" messages
+		game.get_event_history().iter()
+				.filter(|visible_event| {
+					self.auth_type.require_visibility(&visible_event.get_visibility()).is_ok()
+				})
+				.for_each(|visible_event| {
 					let message = Message::Event(visible_event.get_event());
 					let history = Message::History(vec!(message));//TODO: batch up history messages
-					sender.send(ws::Message::text(serde_json::to_string(&history).unwrap()));//TODO: handle errors here
+					Self::send_message(&sender, &history);
 				});
-				let empty_history = Message::History(vec!());//this marks the end of history messages
-				sender.send(ws::Message::text(serde_json::to_string(&empty_history).unwrap()));//TODO: handle errors here
 
-				//listen for all future events
-				game.add_event_listener(Self::filter_visible_events(auth_type.clone(), move |event| {
-					let message = Message::Event(event);
-					sender.send(ws::Message::text(serde_json::to_string(&message).unwrap()));//TODO: handle errors here
-				}))
+		let empty_history = Message::History(vec!());//this marks the end of history messages
+		Self::send_message(&sender, &empty_history);
+
+		//listen for all future events
+		let auth_type = self.auth_type.clone();
+		self.listener_id = Some(game.add_event_listener(move |event| {
+			if auth_type.require_visibility(&event.get_visibility()).is_ok() {
+				let message = Message::Event(event.get_event());
+				Self::send_message(&sender, &message);
 			}
-		};
+		}));
 	}
 }
 
 impl ws::Handler for Handler {
 	fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
-		let request: Request = match serde_json::from_str(msg.as_text()?) {
-			Ok(x) => x,
-			Err(_) => return Err(ws::Error::new(ws::ErrorKind::Protocol, "Invalid Request"))
-		};
-		self.handle_request(request)
+		let msg_text = msg.as_text()?;
+		if let Err(api_error) = self.handle_request(msg_text) {
+			let err_string = serde_json::to_string(&api_error.into_response()).unwrap();
+			return self.sender.close_with_reason(ws::CloseCode::Policy, err_string);
+		}
+		Ok(())
+	}
+	fn on_close(&mut self, _code: ws::CloseCode, _reason: &str) {
+		self.shutdown_event_stream();
 	}
 }

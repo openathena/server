@@ -1,4 +1,4 @@
-#![feature(plugin, conservative_impl_trait)]
+#![feature(plugin)]
 #![plugin(rocket_codegen)]
 
 #[macro_use]

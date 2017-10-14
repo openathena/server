@@ -13,7 +13,9 @@ pub enum ApiErrorType {
 	ValidationFailed,
 	BadRequest,
 	NotFound,
-	InternalServerError
+	InternalServerError,
+	Unauthorized,
+	Forbidden
 }
 
 impl ApiErrorType {
@@ -22,7 +24,9 @@ impl ApiErrorType {
 			ApiErrorType::ValidationFailed => Status::BadRequest,
 			ApiErrorType::BadRequest => Status::BadRequest,
 			ApiErrorType::NotFound => Status::NotFound,
-			ApiErrorType::InternalServerError => Status::InternalServerError
+			ApiErrorType::InternalServerError => Status::InternalServerError,
+			ApiErrorType::Unauthorized => Status::Unauthorized,
+			ApiErrorType::Forbidden => Status::Forbidden
 		}
 	}
 }
@@ -40,6 +44,9 @@ impl ApiError {
 			response: ErrorResponse::new(error_type, description)
 		}
 	}
+	pub fn into_response(self) -> ErrorResponse {
+		self.response
+	}
 }
 
 impl From<JsonError> for ApiError {
@@ -50,7 +57,7 @@ impl From<JsonError> for ApiError {
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct ErrorResponse {
+pub struct ErrorResponse {
 	error_type: ApiErrorType,
 	description: String
 }

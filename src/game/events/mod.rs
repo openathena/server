@@ -1,6 +1,7 @@
 #[derive(Clone, PartialEq)]
 pub enum Visibility {
-	Public
+	Public,
+	Team(String)
 }
 
 #[derive(Clone)]

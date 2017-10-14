@@ -1,4 +1,4 @@
-use rand::{thread_rng, Rng};
+use game::Game;
 
 #[derive(Clone)]
 pub struct Team {
@@ -10,7 +10,7 @@ pub struct Team {
 impl Team {
 	pub fn new(name: &str, password: &str) -> Team {
 		Team {
-			id: Self::generate_id(),
+			id: Game::generate_id(),
 			name: name.to_owned(),
 			password: password.to_owned()
 		}
@@ -26,12 +26,5 @@ impl Team {
 
 	pub fn check_password(&self, password: &str) -> bool {
 		self.password == password //TODO: fix timing attack
-	}
-
-	fn generate_id() -> String {
-		thread_rng()
-				.gen_ascii_chars()
-				.take(24)
-				.collect::<String>()
 	}
 }

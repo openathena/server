@@ -9,6 +9,6 @@ pub enum Request {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthRequest {
-	pub team_id: String,
+	pub username: String,
 	pub password: String
 }
