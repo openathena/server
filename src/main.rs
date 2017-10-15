@@ -13,6 +13,9 @@ extern crate validate;
 extern crate serde;
 
 
+#[cfg(test)]
+mod test;
+
 mod game;
 mod api;
 mod websocket;
