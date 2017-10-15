@@ -1,6 +1,8 @@
 Athena
 ====
 [![Build Status](https://travis-ci.org/openathena/server.svg?branch=master)](https://travis-ci.org/openathena/server)
+[![Build status](https://ci.appveyor.com/api/projects/status/jt6ufnmm1l8ji1ws?svg=true)](https://ci.appveyor.com/project/fuchsnj/server)
+
 ## Documentation
 https://github.com/openathena/server/wiki
 
