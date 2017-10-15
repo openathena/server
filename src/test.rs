@@ -3,16 +3,31 @@ use websocket::server::Server;
 use std::thread;
 use game::Game;
 use ws;
-use std::sync::mpsc::{channel, Sender};
+use std::sync::mpsc::channel;
+use std::sync::mpsc::Sender as ChannelSender;
+use ws::Sender as WsSender;
 use std::time::Duration;
 
-struct Handler{
-	sender: Sender<()>
+use websocket::request::Request as WsRequest;
+use serde_json;
+
+
+struct Handler {
+	channel_sender: ChannelSender<()>,
+	ws_sender: WsSender
 }
 
-impl ws::Handler for Handler{
+impl ws::Handler for Handler {
 	fn on_open(&mut self, _shake: ws::Handshake) -> ws::Result<()> {
-		self.sender.send(()).unwrap();
+		self.ws_sender.send(ws::Message::from(
+			serde_json::to_string(
+				&WsRequest::Observe
+			).unwrap()
+		)).unwrap();
+		Ok(())
+	}
+	fn on_message(&mut self, _msg: ws::Message) -> ws::Result<()> {
+		self.channel_sender.send(()).unwrap();
 		Ok(())
 	}
 }
@@ -29,9 +44,10 @@ fn test() {
 
 
 	let _client_thread = thread::spawn(move || {
-		ws::connect("ws://127.0.0.1:43202", |_out| {
+		ws::connect("ws://127.0.0.1:43202", |out| {
 			Handler {
-				sender: send.clone()
+				channel_sender: send.clone(),
+				ws_sender: out
 			}
 		}).unwrap();
 	});

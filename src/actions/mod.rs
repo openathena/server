@@ -1,4 +1,4 @@
-mod create_team;
+pub mod create_team;
 
 use serde_json::Value;
 use serde_json;
