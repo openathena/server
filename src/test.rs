@@ -36,12 +36,14 @@ impl ws::Handler for Handler {
 fn test() {
 	let game = Arc::new(Mutex::new(Game::new()));
 
+	let (send, recv) = channel();
+
+
 	let _server_thread = thread::spawn(move || {
 		Server::new(game).start();
 	});
 
-	let (send, recv) = channel();
-
+	thread::sleep_ms(1000);//TODO: wait for server to start
 
 	let _client_thread = thread::spawn(move || {
 		ws::connect("ws://127.0.0.1:43202", |out| {
