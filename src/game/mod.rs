@@ -2,6 +2,7 @@ pub mod events;
 pub mod hex_grid;
 pub mod auth;
 pub mod team;
+pub mod submarine;
 
 use self::events::*;
 pub use self::team::Team;
@@ -10,6 +11,7 @@ use api::error_handlers::{ApiError, ApiErrorType};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use self::hex_grid::*;
+use self::submarine::Submarine;
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -38,9 +40,10 @@ impl State {
 pub struct Game {
 	state: State,
 	teams: HashMap<String, Team>,
-	world: HexGrid<TileType>,
+	world: HashMap<Coordinate, TileType>,
 	event_history: Vec<VisibleEvent>,
-	event_listeners: HashMap<String, Box<FnMut(VisibleEvent) + Send>>
+	event_listeners: HashMap<String, Box<FnMut(VisibleEvent) + Send>>,
+	submarines: HashMap<String, Submarine>
 }
 
 impl Game {
@@ -48,9 +51,10 @@ impl Game {
 		Game {
 			state: State::TeamCreation,
 			teams: HashMap::new(),
-			world: HexGrid::new(),
+			world: HashMap::new(),
 			event_history: Vec::new(),
-			event_listeners: HashMap::new()
+			event_listeners: HashMap::new(),
+			submarines: HashMap::new()
 		}
 	}
 
@@ -112,6 +116,7 @@ impl Game {
 	pub fn start(&mut self) -> Result<(), ApiError> {
 		self.state.require_state(State::TeamCreation)?;
 		self.generate_world();
+		self.place_starting_submarines()?;
 		self.generate_event(Visibility::Public, Event::GameStarted);
 		self.state = State::Started;
 		Ok(())
@@ -119,15 +124,52 @@ impl Game {
 
 	fn generate_world(&mut self) {
 		let default_tile = TileType::Water;
-		let coords = CENTER + Offset::fill_hex(8);//TODO: not sure what the size/shape should be yet
+
+		//TODO: not sure what the size/shape should be yet
+		//TODO: make sure map is large enough to fit ships for all teams
+		let coords = CENTER + Offset::fill_hex(8);
 		for coord in coords {
-			self.world.set(coord, default_tile);
+			self.world.insert(coord, default_tile);
 			self.generate_event(Visibility::Public, Event::TileUpdated(events::TileUpdated {
 				x: coord.x,
 				y: coord.y,
 				tile: Tile { tile_type: default_tile },
 			}))
 		}
+	}
+
+	fn place_starting_submarines(&mut self) -> Result<(), ApiError> {
+		let mut empty_tiles: Vec<Coordinate> = self.world.keys()
+				.map(|x|x.clone())
+				.filter(|x| self.is_tile_empty(*x))
+				.collect();
+		thread_rng().shuffle(&mut empty_tiles);
+		let teams:Vec<Team> = self.teams.values().map(|x|x.clone()).collect();
+		for team in teams {
+			let coord = if let Some(coord) = empty_tiles.pop() {
+				coord
+			} else {
+				return Err(ApiError::new(ApiErrorType::InternalServerError, "Not enough tiles for ships"));
+			};
+			let submarine = Submarine::new(coord, &team.get_id());
+			self.submarines.insert(submarine.get_id(), submarine.clone());
+			self.generate_event(Visibility::Team(team.get_id()), Event::SubmarineCreated(SubmarineCreated {
+				x: coord.x,
+				y: coord.y,
+				id: submarine.get_id(),
+				team_id: submarine.get_team_id(),
+			}));
+		}
+		Ok(())
+	}
+
+	pub fn is_tile_empty<T: Into<Coordinate>>(&self, coord: T) -> bool {
+		self.get_submarine_at(coord).is_none()
+	}
+
+	pub fn get_submarine_at<T: Into<Coordinate>>(&self, coords: T) -> Option<&Submarine> {
+		let coords = coords.into();
+		self.submarines.values().find(move |x| x.get_coords() == coords)
 	}
 
 	fn generate_id() -> String {

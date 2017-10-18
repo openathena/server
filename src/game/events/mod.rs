@@ -30,6 +30,7 @@ impl VisibleEvent {
 pub enum Event {
 	TeamCreated(TeamCreated),
 	TileUpdated(TileUpdated),
+	SubmarineCreated(SubmarineCreated),
 	GameStarted
 }
 
@@ -53,4 +54,13 @@ pub struct TileUpdated {
 pub struct Tile {
 	#[serde(rename = "type")]
 	pub tile_type: game::TileType
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmarineCreated {
+	pub x: i32,
+	pub y: i32,
+	pub id: String,
+	pub team_id: String
 }
