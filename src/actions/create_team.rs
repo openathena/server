@@ -15,7 +15,7 @@ impl ActionDef for Definition {
 	fn execute(&self, request: Self::Request, game: &mut Game) -> Result<Response, ApiError> {
 		let team = Team::new(&request.name, &request.password);
 		let team_id = team.get_id();
-		game.add_team(team);
+		game.add_team(team)?;
 		Ok(Response { team_id })
 	}
 }

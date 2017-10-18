@@ -6,8 +6,8 @@ pub const CENTER: Coordinate = Coordinate { x: 0, y: 0 };
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone, Debug)]
 pub struct Coordinate {
-	x: i32,
-	y: i32
+	pub x: i32,
+	pub y: i32
 }
 
 impl From<(i32, i32)> for Coordinate {

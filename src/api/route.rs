@@ -3,9 +3,8 @@ use rocket::State;
 use std::sync::{Arc, Mutex};
 use game::Game;
 use super::error_handlers::ApiError;
-use serde_json;
 use actions::ActionMap;
-use serde_json::Value;
+use serde_json::Value as JsonValue;
 
 type GameMutex = Arc<Mutex<Game>>;
 
@@ -13,14 +12,15 @@ type GameMutex = Arc<Mutex<Game>>;
 pub struct RequestEnvelope {
 	#[serde(rename = "type")]
 	pub request_type: String,
-	pub data: serde_json::Value
+	pub data: Option<JsonValue>
 }
 
 #[post("/", data = "<rpc_request>")]
 pub fn rpc_request(rpc_request: Json<RequestEnvelope>, game: State<GameMutex>, action_map: State<ActionMap>)
-                   -> Option<Result<Json<Value>, ApiError>> {
+                   -> Option<Result<Json<JsonValue>, ApiError>> {
 	action_map.get(&rpc_request.request_type).map(|action| {
 		let mut game = game.lock().unwrap();
-		action.process(rpc_request.data.clone(), &mut game).map(|x| Json(x))
+		let request_data = rpc_request.data.clone().unwrap_or(JsonValue::Null);
+		action.process(request_data, &mut game).map(|x| Json(x))
 	})
 }

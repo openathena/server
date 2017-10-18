@@ -1,20 +1,44 @@
-pub mod team;
-pub mod world;
 pub mod events;
 pub mod hex_grid;
 pub mod auth;
+pub mod team;
 
 use self::events::*;
 pub use self::team::Team;
-use self::world::World;
 pub use self::auth::AuthType;
 use api::error_handlers::{ApiError, ApiErrorType};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
+use self::hex_grid::*;
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum TileType {
+	Water
+}
+
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum State {
+	TeamCreation,
+	Started
+}
+
+impl State {
+	pub fn require_state(&self, state: State) -> Result<(), ApiError> {
+		if *self == state {
+			Ok(())
+		} else {
+			let msg = &format!("Illegal game state for action. Required '{:?}' but is currently '{:?}'", state, *self);
+			Err(ApiError::new(ApiErrorType::BadRequest, msg))
+		}
+	}
+}
 
 pub struct Game {
+	state: State,
 	teams: HashMap<String, Team>,
-	world: World,
+	world: HexGrid<TileType>,
 	event_history: Vec<VisibleEvent>,
 	event_listeners: HashMap<String, Box<FnMut(VisibleEvent) + Send>>
 }
@@ -22,14 +46,15 @@ pub struct Game {
 impl Game {
 	pub fn new() -> Game {
 		Game {
+			state: State::TeamCreation,
 			teams: HashMap::new(),
-			world: World::new(8),
+			world: HexGrid::new(),
 			event_history: Vec::new(),
 			event_listeners: HashMap::new()
 		}
 	}
 
-	fn generate_event(&mut self, visibility: Visibility, event: Event) {
+	pub fn generate_event(&mut self, visibility: Visibility, event: Event) {
 		let visible_event = VisibleEvent::new(visibility, event);
 
 		for listener in &mut self.event_listeners.values_mut() {
@@ -39,12 +64,14 @@ impl Game {
 		self.event_history.push(visible_event);
 	}
 
-	pub fn add_team(&mut self, team: Team) {
+	pub fn add_team(&mut self, team: Team) -> Result<(), ApiError> {
+		self.state.require_state(State::TeamCreation)?;
 		self.teams.insert(team.get_id().to_owned(), team.clone());
 		self.generate_event(Visibility::Public, Event::TeamCreated(TeamCreated {
 			id: team.get_id(),
 			name: team.get_name(),
 		}));
+		Ok(())
 	}
 
 	pub fn auth(&self, credentials: Option<(&str, &str)>) -> Result<AuthType, ApiError> {
@@ -80,6 +107,27 @@ impl Game {
 
 	pub fn get_event_history(&self) -> &Vec<VisibleEvent> {
 		&self.event_history
+	}
+
+	pub fn start(&mut self) -> Result<(), ApiError> {
+		self.state.require_state(State::TeamCreation)?;
+		self.generate_world();
+		self.generate_event(Visibility::Public, Event::GameStarted);
+		self.state = State::Started;
+		Ok(())
+	}
+
+	fn generate_world(&mut self) {
+		let default_tile = TileType::Water;
+		let coords = CENTER + Offset::fill_hex(8);//TODO: not sure what the size/shape should be yet
+		for coord in coords {
+			self.world.set(coord, default_tile);
+			self.generate_event(Visibility::Public, Event::TileUpdated(events::TileUpdated {
+				x: coord.x,
+				y: coord.y,
+				tile: Tile { tile_type: default_tile },
+			}))
+		}
 	}
 
 	fn generate_id() -> String {

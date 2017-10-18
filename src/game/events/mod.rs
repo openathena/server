@@ -1,3 +1,5 @@
+use game;
+
 #[derive(Clone, PartialEq)]
 pub enum Visibility {
 	Public,
@@ -26,7 +28,9 @@ impl VisibleEvent {
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Event {
-	TeamCreated(TeamCreated)
+	TeamCreated(TeamCreated),
+	TileUpdated(TileUpdated),
+	GameStarted
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -34,4 +38,19 @@ pub enum Event {
 pub struct TeamCreated {
 	pub id: String,
 	pub name: String
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct TileUpdated {
+	pub x: i32,
+	pub y: i32,
+	pub tile: Tile
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Tile {
+	#[serde(rename = "type")]
+	pub tile_type: game::TileType
 }

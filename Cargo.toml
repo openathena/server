@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Nathan Fox <fuchsnj@gmail.com>"]
 
 [dependencies]
-validate = "0.6.0"
+validate = "0.6.1"
 rocket = "0.3.2"
 rocket_codegen = "0.3.2"
 rocket_contrib = "0.3.2"
