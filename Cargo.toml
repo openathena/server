@@ -13,3 +13,6 @@ serde_json = "1.0"
 serde_derive = "1.0"
 rand = "0.3"
 ws = "0.7.3"
+
+[patch.crates-io]
+mio = {git = "https://github.com/carllerche/mio", rev = "ad9911fda25798f07b5d8663f9f0640081415aa9"}
