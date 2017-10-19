@@ -20,6 +20,7 @@ mod game;
 mod api;
 mod websocket;
 mod actions;
+mod events;
 
 use api::server::Server as ApiServer;
 use websocket::server::Server as WsServer;

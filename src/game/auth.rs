@@ -1,5 +1,5 @@
 use api::error_handlers::{ApiErrorType, ApiError};
-use game::events::Visibility;
+use events::Visibility;
 
 #[derive(Clone)]
 pub enum AuthType {

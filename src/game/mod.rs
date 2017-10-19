@@ -1,10 +1,9 @@
-pub mod events;
 pub mod hex_grid;
 pub mod auth;
 pub mod team;
 pub mod submarine;
 
-use self::events::*;
+use events::*;
 pub use self::team::Team;
 pub use self::auth::AuthType;
 use api::error_handlers::{ApiError, ApiErrorType};
@@ -12,6 +11,7 @@ use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use self::hex_grid::*;
 use self::submarine::Submarine;
+use std::time::Instant;
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -38,6 +38,7 @@ impl State {
 }
 
 pub struct Game {
+	game_start: Instant,
 	state: State,
 	teams: HashMap<String, Team>,
 	world: HashMap<Coordinate, TileType>,
@@ -49,6 +50,7 @@ pub struct Game {
 impl Game {
 	pub fn new() -> Game {
 		Game {
+			game_start: Instant::now(),
 			state: State::TeamCreation,
 			teams: HashMap::new(),
 			world: HashMap::new(),
@@ -58,23 +60,22 @@ impl Game {
 		}
 	}
 
-	pub fn generate_event(&mut self, visibility: Visibility, event: Event) {
-		let visible_event = VisibleEvent::new(visibility, event);
-
+	pub fn generate_event<T: EventType>(&mut self, visibility: Visibility, event_type: &T) -> Result<(), ApiError> {
+		let visible_event = VisibleEvent::new(visibility, Event::new(event_type, self.game_start.elapsed())?);
 		for listener in &mut self.event_listeners.values_mut() {
 			listener(visible_event.clone())
 		}
-
 		self.event_history.push(visible_event);
+		Ok(())
 	}
 
 	pub fn add_team(&mut self, team: Team) -> Result<(), ApiError> {
 		self.state.require_state(State::TeamCreation)?;
 		self.teams.insert(team.get_id().to_owned(), team.clone());
-		self.generate_event(Visibility::Public, Event::TeamCreated(TeamCreated {
+		self.generate_event(Visibility::Public, &TeamCreated {
 			id: team.get_id(),
 			name: team.get_name(),
-		}));
+		})?;
 		Ok(())
 	}
 
@@ -115,14 +116,14 @@ impl Game {
 
 	pub fn start(&mut self) -> Result<(), ApiError> {
 		self.state.require_state(State::TeamCreation)?;
-		self.generate_world();
+		self.generate_world()?;
 		self.place_starting_submarines()?;
-		self.generate_event(Visibility::Public, Event::GameStarted);
+		self.generate_event(Visibility::Public, &GameStarted)?;
 		self.state = State::Started;
 		Ok(())
 	}
 
-	fn generate_world(&mut self) {
+	fn generate_world(&mut self) -> Result<(), ApiError> {
 		let default_tile = TileType::Water;
 
 		//TODO: not sure what the size/shape should be yet
@@ -130,21 +131,22 @@ impl Game {
 		let coords = CENTER + Offset::fill_hex(8);
 		for coord in coords {
 			self.world.insert(coord, default_tile);
-			self.generate_event(Visibility::Public, Event::TileUpdated(events::TileUpdated {
+			self.generate_event(Visibility::Public, &TileUpdated {
 				x: coord.x,
 				y: coord.y,
-				tile: Tile { tile_type: default_tile },
-			}))
+				tile: tile_updated::Tile { tile_type: default_tile },
+			})?;
 		}
+		Ok(())
 	}
 
 	fn place_starting_submarines(&mut self) -> Result<(), ApiError> {
 		let mut empty_tiles: Vec<Coordinate> = self.world.keys()
-				.map(|x|x.clone())
+				.map(|x| x.clone())
 				.filter(|x| self.is_tile_empty(*x))
 				.collect();
 		thread_rng().shuffle(&mut empty_tiles);
-		let teams:Vec<Team> = self.teams.values().map(|x|x.clone()).collect();
+		let teams: Vec<Team> = self.teams.values().map(|x| x.clone()).collect();
 		for team in teams {
 			let coord = if let Some(coord) = empty_tiles.pop() {
 				coord
@@ -153,12 +155,12 @@ impl Game {
 			};
 			let submarine = Submarine::new(coord, &team.get_id());
 			self.submarines.insert(submarine.get_id(), submarine.clone());
-			self.generate_event(Visibility::Team(team.get_id()), Event::SubmarineCreated(SubmarineCreated {
+			self.generate_event(Visibility::Team(team.get_id()), &SubmarineCreated {
 				x: coord.x,
 				y: coord.y,
 				id: submarine.get_id(),
 				team_id: submarine.get_team_id(),
-			}));
+			})?;
 		}
 		Ok(())
 	}

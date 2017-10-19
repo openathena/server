@@ -1,4 +1,4 @@
-use game::events::Event;
+use events::Event;
 
 #[derive(Serialize)]
 #[serde(tag = "type", content = "data")]
