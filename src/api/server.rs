@@ -1,8 +1,7 @@
 use std::sync::{Arc, Mutex};
-use game::Game;
-use super::error_handlers;
-use api;
 use rocket;
+use game::Game;
+use api::{error_handlers, route, cors};
 use actions::action_map;
 
 pub struct Server {
@@ -15,8 +14,11 @@ impl Server {
 	}
 	pub fn start(self) {
 		let action_map = action_map();
+		let options = cors::options();
+
 		rocket::ignite()
-				.mount("/rpc/", routes![api::route::rpc_request])
+				.mount("/rpc/", routes![route::rpc_request])
+				.attach(options)
 				.catch(error_handlers::get_catchers())
 				.manage(self.game)
 				.manage(action_map)

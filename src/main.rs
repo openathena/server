@@ -6,6 +6,7 @@ extern crate serde_derive;
 
 extern crate rocket_contrib;
 extern crate rocket;
+extern crate rocket_cors;
 extern crate rand;
 extern crate ws;
 extern crate serde_json;
