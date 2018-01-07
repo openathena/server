@@ -1,4 +1,4 @@
-use game::hex_grid::*;
+use hex_grid::*;
 use game::Game;
 
 #[derive(Clone)]
