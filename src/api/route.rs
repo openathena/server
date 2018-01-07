@@ -16,7 +16,7 @@ pub struct RequestEnvelope {
 }
 
 #[post("/", data = "<rpc_request>")]
-pub fn rpc_request(rpc_request: Json<RequestEnvelope>, game: State<GameMutex>, action_map: State<ActionMap>)
+pub fn rpc_request(rpc_request: Json<RequestEnvelope>, mut game: State<GameMutex>, action_map: State<ActionMap>)
                    -> Option<Result<Json<JsonValue>, ApiError>> {
 	action_map.get(&rpc_request.request_type).map(|action| {
 		let mut game = game.lock().unwrap();

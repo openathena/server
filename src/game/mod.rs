@@ -1,7 +1,10 @@
 pub mod auth;
 pub mod team;
 pub mod submarine;
+pub mod server_time;
+pub mod data;
 
+use self::data::GameData;
 use events::*;
 pub use self::team::Team;
 pub use self::auth::AuthType;
@@ -11,172 +14,99 @@ use std::collections::HashMap;
 use hex_grid::*;
 use self::submarine::Submarine;
 use std::time::Instant;
-
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum TileType {
-	Water
-}
-
-
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum State {
-	TeamCreation,
-	Started
-}
+use task_scheduler::Scheduler;
+use self::server_time::ServerTime;
+use std::sync::{Arc, Mutex};
+use self::data::*;
 
 impl State {
-	pub fn require_state(&self, state: State) -> Result<(), ApiError> {
-		if *self == state {
-			Ok(())
-		} else {
-			let msg = &format!("Illegal game state for action. Required '{:?}' but is currently '{:?}'", state, *self);
-			Err(ApiError::new(ApiErrorType::BadRequest, msg))
-		}
-	}
+    pub fn require_state(&self, state: State) -> Result<(), ApiError> {
+        if *self == state {
+            Ok(())
+        } else {
+            let msg = &format!("Illegal game state for action. Required '{:?}' but is currently '{:?}'", state, *self);
+            Err(ApiError::new(ApiErrorType::BadRequest, msg))
+        }
+    }
 }
 
 pub struct Game {
-	game_start: Instant,
-	state: State,
-	teams: HashMap<String, Team>,
-	world: HashMap<Coordinate, TileType>,
-	event_history: Vec<VisibleEvent>,
-	event_listeners: HashMap<String, Box<FnMut(VisibleEvent) + Send>>,
-	submarines: HashMap<String, Submarine>
+    scheduler: Scheduler,
+    data: Arc<Mutex<GameData>>,
 }
 
 impl Game {
-	pub fn new() -> Game {
-		Game {
-			game_start: Instant::now(),
-			state: State::TeamCreation,
-			teams: HashMap::new(),
-			world: HashMap::new(),
-			event_history: Vec::new(),
-			event_listeners: HashMap::new(),
-			submarines: HashMap::new()
-		}
-	}
+    pub fn new() -> Game {
+        Game {
+            scheduler: Scheduler::new(),
+            data: Arc::new(Mutex::new(GameData {
+                game_start: Instant::now(),
+                state: State::TeamCreation,
+                teams: HashMap::new(),
+                world: HashMap::new(),
+                event_history: Vec::new(),
+                event_listeners: HashMap::new(),
+                submarines: HashMap::new(),
+            })),
+        }
+    }
 
-	pub fn generate_event<T: EventType>(&mut self, visibility: Visibility, event_type: &T) -> Result<(), ApiError> {
-		let visible_event = VisibleEvent::new(visibility, Event::new(event_type, self.game_start.elapsed())?);
-		for listener in &mut self.event_listeners.values_mut() {
-			listener(visible_event.clone())
-		}
-		self.event_history.push(visible_event);
-		Ok(())
-	}
+    pub fn get_scheduler(&mut self) -> &mut Scheduler {
+        &mut self.scheduler
+    }
 
-	pub fn add_team(&mut self, team: Team) -> Result<(), ApiError> {
-		self.state.require_state(State::TeamCreation)?;
-		self.teams.insert(team.get_id().to_owned(), team.clone());
-		self.generate_event(Visibility::Public, &TeamCreated {
-			id: team.get_id(),
-			name: team.get_name(),
-		})?;
-		Ok(())
-	}
 
-	pub fn auth(&self, credentials: Option<(&str, &str)>) -> Result<AuthType, ApiError> {
-		if let Some((username, password)) = credentials {
-			if let Some(team) = self.get_team(username) {
-				if team.check_password(password) {
-					Ok(AuthType::Team(team.get_id()))
-				} else {
-					Err(ApiError::new(ApiErrorType::Unauthorized, "Invalid username or password"))
-				}
-			} else {
-				Err(ApiError::new(ApiErrorType::Unauthorized, "Invalid username or password"))
-			}
-		} else {
-			Ok(AuthType::Observer)
-		}
-	}
+    pub fn add_team(&mut self, team: Team) -> Result<(), ApiError> {
+        self.data.lock().unwrap().add_team(team)
+    }
 
-	pub fn get_team(&self, id: &str) -> Option<&Team> {
-		self.teams.get(id)
-	}
+    pub fn auth(&self, credentials: Option<(&str, &str)>) -> Result<AuthType, ApiError> {
+        self.data.lock().unwrap().auth(credentials)
+    }
 
-	pub fn add_event_listener<F>(&mut self, listener: F) -> String
-		where F: FnMut(VisibleEvent) + Send + 'static {
-		let id = Self::generate_id();
-		self.event_listeners.insert(id.clone(), Box::new(listener));
-		id
-	}
+    pub fn add_event_listener<F>(&mut self, listener: F) -> String
+        where F: FnMut(VisibleEvent) + Send + 'static {
+        self.data.lock().unwrap().add_event_listener(listener)
+    }
 
-	pub fn remove_event_listener(&mut self, id: &str) {
-		self.event_listeners.remove(id);
-	}
+    pub fn remove_event_listener(&mut self, id: &str) {
+        self.data.lock().unwrap().remove_event_listener(id)
+    }
 
-	pub fn get_event_history(&self) -> &Vec<VisibleEvent> {
-		&self.event_history
-	}
+//    pub fn get_event_history(&self) -> &Vec<VisibleEvent> {
+////        &self.event_history
+//        //TODO: take a function to iterate over event history
+//        &vec!()
+//    }
 
-	pub fn start(&mut self) -> Result<(), ApiError> {
-		self.state.require_state(State::TeamCreation)?;
-		self.generate_world()?;
-		self.place_starting_submarines()?;
-		self.generate_event(Visibility::Public, &GameStarted)?;
-		self.state = State::Started;
-		Ok(())
-	}
+    pub fn start(&mut self) -> Result<(), ApiError> {
+        self.data.lock().unwrap().start()
+    }
 
-	fn generate_world(&mut self) -> Result<(), ApiError> {
-		let default_tile = TileType::Water;
+//    pub fn get_submarine(&self, sub_id: &str) -> Result<&Submarine, ApiError> {
+//        match self.submarines.get(&sub_id.to_owned()) {
+//            Some(sub) => Ok(sub),
+//            None => Err(ApiError::new(ApiErrorType::BadRequest, "Invalid submarine id"))
+//        }
+//    }
 
-		//TODO: not sure what the size/shape should be yet
-		//TODO: make sure map is large enough to fit ships for all teams
-		let coords = CENTER + Offset::fill_hex(8);
-		for coord in coords {
-			self.world.insert(coord, default_tile);
-			self.generate_event(Visibility::Public, &TileUpdated {
-				x: coord.x,
-				y: coord.y,
-				tile: tile_updated::Tile { tile_type: default_tile },
-			})?;
-		}
-		Ok(())
-	}
+    pub fn move_submarine<C: Into<Coordinate>>(&mut self, sub_id: String, destination: C) -> Result<(), ApiError> {
+        let mut data = self.data.lock().unwrap();
+        let moved_time = data.move_submarine(sub_id, destination)?;
 
-	fn place_starting_submarines(&mut self) -> Result<(), ApiError> {
-		let mut empty_tiles: Vec<Coordinate> = self.world.keys()
-				.map(|x| x.clone())
-				.filter(|x| self.is_tile_empty(*x))
-				.collect();
-		thread_rng().shuffle(&mut empty_tiles);
-		let teams: Vec<Team> = self.teams.values().map(|x| x.clone()).collect();
-		for team in teams {
-			let coord = if let Some(coord) = empty_tiles.pop() {
-				coord
-			} else {
-				return Err(ApiError::new(ApiErrorType::InternalServerError, "Not enough tiles for ships"));
-			};
-			let submarine = Submarine::new(coord, &team.get_id());
-			self.submarines.insert(submarine.get_id(), submarine.clone());
-			self.generate_event(Visibility::Team(team.get_id()), &SubmarineCreated {
-				x: coord.x,
-				y: coord.y,
-				id: submarine.get_id(),
-				team_id: submarine.get_team_id(),
-			})?;
-		}
-		Ok(())
-	}
+        //TODO: schedule cooldown reset event
+//        {
+//            self.get_scheduler().af.after_duration(cooldown, || {
+//                let mut game = game_mutex_clone.lock().unwrap();
+//                game.reset_submarine_cooldown();
+//                game.generate_event(Visibility::Team(team_id), );
+//            });
+//        }
 
-	pub fn is_tile_empty<T: Into<Coordinate>>(&self, coord: T) -> bool {
-		self.get_submarine_at(coord).is_none()
-	}
+        Ok(())
+    }
 
-	pub fn get_submarine_at<T: Into<Coordinate>>(&self, coords: T) -> Option<&Submarine> {
-		let coords = coords.into();
-		self.submarines.values().find(move |x| x.get_coords() == coords)
-	}
-
-	fn generate_id() -> String {
-		thread_rng()
-				.gen_ascii_chars()
-				.take(24)
-				.collect::<String>()
-	}
+//    pub fn reset_submarine_cooldown(&mut self, sub_id: String) -> Result<(), ApiError> {
+//
+//    }
 }
