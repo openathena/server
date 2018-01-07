@@ -43,7 +43,7 @@ fn test() {
 		Server::new(game).start();
 	});
 
-	thread::sleep_ms(1000);//TODO: wait for server to start
+	thread::sleep(Duration::from_secs(1));//TODO: wait for server to start
 
 	let _client_thread = thread::spawn(move || {
 		ws::connect("ws://127.0.0.1:43202", |out| {

@@ -1,4 +1,3 @@
-pub mod hex_grid;
 pub mod auth;
 pub mod team;
 pub mod submarine;
@@ -9,7 +8,7 @@ pub use self::auth::AuthType;
 use api::error_handlers::{ApiError, ApiErrorType};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
-use self::hex_grid::*;
+use hex_grid::*;
 use self::submarine::Submarine;
 use std::time::Instant;
 

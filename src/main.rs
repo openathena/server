@@ -12,6 +12,7 @@ extern crate ws;
 extern crate serde_json;
 extern crate validate;
 extern crate serde;
+extern crate hex_grid;
 
 
 #[cfg(test)]
