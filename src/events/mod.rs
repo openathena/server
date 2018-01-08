@@ -21,49 +21,49 @@ use game::server_time::ServerTime;
 
 #[derive(Clone, PartialEq)]
 pub enum Visibility {
-    Public,
-    Team(String),
+	Public,
+	Team(String),
 }
 
 #[derive(Clone)]
 pub struct VisibleEvent {
-    visibility: Visibility,
-    event: Event,
+	visibility: Visibility,
+	event: Event,
 }
 
 impl VisibleEvent {
-    pub fn new(visibility: Visibility, event: Event) -> VisibleEvent {
-        VisibleEvent { visibility, event }
-    }
-    pub fn get_visibility(&self) -> Visibility {
-        self.visibility.clone()
-    }
-    pub fn get_event(&self) -> Event {
-        self.event.clone()
-    }
+	pub fn new(visibility: Visibility, event: Event) -> VisibleEvent {
+		VisibleEvent { visibility, event }
+	}
+	pub fn get_visibility(&self) -> Visibility {
+		self.visibility.clone()
+	}
+	pub fn get_event(&self) -> Event {
+		self.event.clone()
+	}
 }
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Event {
-    #[serde(rename = "type")]
-    event_type: String,
-    server_time: u64,
-    data: JsonValue,
+	#[serde(rename = "type")]
+	event_type: String,
+	server_time: u64,
+	data: JsonValue,
 }
 
 impl Event {
-    pub fn new<T: EventType>(event: &T, server_time: ServerTime) -> Result<Event, ApiError> {
-        Ok(Event {
-            server_time: server_time.get_millis(),
-            event_type: T::TYPE.to_owned(),
-            data: serde_json::to_value(event)?,
-        })
-    }
+	pub fn new<T: EventType>(event: &T, server_time: ServerTime) -> Result<Event, ApiError> {
+		Ok(Event {
+			server_time: server_time.get_millis(),
+			event_type: T::TYPE.to_owned(),
+			data: serde_json::to_value(event)?,
+		})
+	}
 }
 
 pub trait EventType: Serialize {
-    const TYPE: &'static str;
+	const TYPE: &'static str;
 }
 
 
