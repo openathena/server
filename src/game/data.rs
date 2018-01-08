@@ -76,6 +76,13 @@ impl GameData {
         }
     }
 
+    pub fn get_submarine(&self, sub_id: &str) -> Result<&Submarine, ApiError> {
+        match self.submarines.get(&sub_id.to_owned()) {
+            Some(sub) => Ok(sub),
+            None => Err(ApiError::new(ApiErrorType::BadRequest, "Invalid submarine id"))
+        }
+    }
+
     pub fn move_submarine<C: Into<Coordinate>>(&mut self, sub_id: String, destination: C) -> Result<ServerTime, ApiError> {
         let destination = destination.into();
         let move_time = self.server_time();
@@ -91,7 +98,7 @@ impl GameData {
                 return Err(ApiError::new(ApiErrorType::BadRequest, "Invalid destination"));
             }
 
-            if sub.get_move_cooldown_end() <= move_time {
+            if sub.get_move_cooldown_end() > move_time {
                 return Err(ApiError::new(ApiErrorType::BadRequest, "Move not available"));
             }
             sub.move_to(destination, move_time + Submarine::move_cooldown());
@@ -102,6 +109,7 @@ impl GameData {
                     x: sub.get_coords().x,
                     y: sub.get_coords().y,
                     submarine_id: sub.get_id(),
+                    move_cooldown: sub.get_move_cooldown_end().get_millis()
                 }
             )
         };

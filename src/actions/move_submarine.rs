@@ -7,6 +7,7 @@ use validate::{Validate, ValidationResult};
 use task_scheduler::Scheduler;
 use std::sync::{Arc, Mutex};
 use events::Visibility;
+use game::submarine::Submarine;
 
 pub struct Definition;
 
@@ -18,9 +19,11 @@ impl ActionDef for Definition {
     fn execute(&self, request: Self::Request, game: &mut Game) -> Result<Self::Response, ApiError> {
 
         //TODO: check auth from basic credentials, make sure auth'ed team can access submarine
-        game.move_submarine(request.submarine_id, (request.x, request.y))?;
+        let moved_time = game.move_submarine(request.submarine_id, (request.x, request.y))?;
 
-        Ok(Response {})
+        Ok(Response {
+            move_cooldown: (moved_time + Submarine::move_cooldown()).get_millis(),
+        })
     }
 }
 
@@ -34,7 +37,9 @@ pub struct Request {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Response {}
+pub struct Response {
+    move_cooldown: u64
+}
 
 impl Validate for Request {
     fn validate(&self) -> ValidationResult {

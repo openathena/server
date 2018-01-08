@@ -73,40 +73,33 @@ impl Game {
         self.data.lock().unwrap().remove_event_listener(id)
     }
 
-//    pub fn get_event_history(&self) -> &Vec<VisibleEvent> {
-////        &self.event_history
-//        //TODO: take a function to iterate over event history
-//        &vec!()
-//    }
+    pub fn iter_event_history<F: FnMut(&VisibleEvent)>(&self, mut func: F) {
+        let data = self.data.lock().unwrap();
+        for event in &data.event_history {
+            func(&event)
+        }
+    }
 
     pub fn start(&mut self) -> Result<(), ApiError> {
         self.data.lock().unwrap().start()
     }
 
-//    pub fn get_submarine(&self, sub_id: &str) -> Result<&Submarine, ApiError> {
-//        match self.submarines.get(&sub_id.to_owned()) {
-//            Some(sub) => Ok(sub),
-//            None => Err(ApiError::new(ApiErrorType::BadRequest, "Invalid submarine id"))
-//        }
-//    }
 
-    pub fn move_submarine<C: Into<Coordinate>>(&mut self, sub_id: String, destination: C) -> Result<(), ApiError> {
-        let mut data = self.data.lock().unwrap();
-        let moved_time = data.move_submarine(sub_id, destination)?;
+    pub fn move_submarine<C: Into<Coordinate>>(&mut self, sub_id: String, destination: C) -> Result<ServerTime, ApiError> {
+        let sub_owner;
+        let moved_time;
+        {
+            let mut data = self.data.lock().unwrap();
+            sub_owner = data.get_submarine(&sub_id)?.get_team_id();
+            moved_time = data.move_submarine(sub_id.clone(), destination)?;
+        }
 
-        //TODO: schedule cooldown reset event
-//        {
-//            self.get_scheduler().af.after_duration(cooldown, || {
-//                let mut game = game_mutex_clone.lock().unwrap();
-//                game.reset_submarine_cooldown();
-//                game.generate_event(Visibility::Team(team_id), );
-//            });
-//        }
-
-        Ok(())
+        let data_clone = self.data.clone();
+        self.get_scheduler().after_duration(Submarine::move_cooldown(), move || {
+            data_clone.lock().unwrap().generate_event(Visibility::Team(sub_owner), &SubmarineMoveCooldown {
+                submarine_id: sub_id,
+            });
+        });
+        Ok(moved_time)
     }
-
-//    pub fn reset_submarine_cooldown(&mut self, sub_id: String) -> Result<(), ApiError> {
-//
-//    }
 }
