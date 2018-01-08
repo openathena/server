@@ -9,7 +9,6 @@ use events::*;
 pub use self::team::Team;
 pub use self::auth::AuthType;
 use api::error_handlers::{ApiError, ApiErrorType};
-use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use hex_grid::*;
 use self::submarine::Submarine;
@@ -98,7 +97,7 @@ impl Game {
         self.get_scheduler().after_duration(Submarine::move_cooldown(), move || {
             data_clone.lock().unwrap().generate_event(Visibility::Team(sub_owner), &SubmarineMoveCooldown {
                 submarine_id: sub_id,
-            });
+            }).unwrap();
         });
         Ok(moved_time)
     }

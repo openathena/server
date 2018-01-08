@@ -1,12 +1,7 @@
 use super::ActionDef;
 use api::error_handlers::ApiError;
 use game::Game;
-use hex_grid::*;
-use std::time::Duration;
 use validate::{Validate, ValidationResult};
-use task_scheduler::Scheduler;
-use std::sync::{Arc, Mutex};
-use events::Visibility;
 use game::submarine::Submarine;
 
 pub struct Definition;

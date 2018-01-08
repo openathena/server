@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use api::error_handlers::ApiError;
 use validate::Validate;
 use api::error_handlers::ApiErrorType;
-use std::sync::{Arc, Mutex};
 
 pub type ActionMap = HashMap<String, &'static Action>;
 

@@ -17,11 +17,7 @@ use serde::Serialize;
 use serde_json;
 use serde_json::Value as JsonValue;
 use api::error_handlers::ApiError;
-use std::time::Duration;
 use game::server_time::ServerTime;
-
-const MILLIS_PER_SEC: u64 = 1000;
-const NANOS_PER_MILLI: u32 = 1000_000;
 
 #[derive(Clone, PartialEq)]
 pub enum Visibility {

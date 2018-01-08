@@ -1,4 +1,3 @@
-use game::Game;
 use game::data::GameData;
 
 #[derive(Clone)]
