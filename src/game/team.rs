@@ -1,18 +1,18 @@
-use game::Game;
+use game::data::GameData;
 
 #[derive(Clone)]
 pub struct Team {
 	id: String,
 	name: String,
-	password: String
+	password: String,
 }
 
 impl Team {
 	pub fn new(name: &str, password: &str) -> Team {
 		Team {
-			id: Game::generate_id(),
+			id: GameData::generate_id(),
 			name: name.to_owned(),
-			password: password.to_owned()
+			password: password.to_owned(),
 		}
 	}
 

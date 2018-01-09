@@ -1,5 +1,6 @@
 pub mod create_team;
 pub mod start_game;
+pub mod move_submarine;
 
 use serde_json::Value;
 use serde_json;
@@ -15,7 +16,8 @@ pub type ActionMap = HashMap<String, &'static Action>;
 pub fn action_list() -> Vec<&'static Action> {
 	vec![
 		&create_team::Definition,
-		&start_game::Definition
+		&start_game::Definition,
+		&move_submarine::Definition
 	]
 }
 

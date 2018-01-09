@@ -13,7 +13,7 @@ pub struct TileUpdated {
 #[serde(rename_all = "camelCase")]
 pub struct Tile {
 	#[serde(rename = "type")]
-	pub tile_type: game::TileType
+	pub tile_type: game::data::TileType
 }
 
 impl EventType for TileUpdated {

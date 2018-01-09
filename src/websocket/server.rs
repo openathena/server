@@ -6,6 +6,7 @@ use super::request::Request;
 use super::message::Message;
 use api::error_handlers::{ApiErrorType, ApiError};
 use game::auth::AuthType;
+use events::VisibleEvent;
 
 const PORT: u16 = 43202;
 
@@ -82,15 +83,15 @@ impl Handler {
 		let mut game = self.game.lock().unwrap();
 
 		//send all existing events as "History" messages
-		game.get_event_history().iter()
-				.filter(|visible_event| {
-					self.auth_type.require_visibility(&visible_event.get_visibility()).is_ok()
-				})
-				.for_each(|visible_event| {
-					let message = Message::Event(visible_event.get_event());
-					let history = Message::History(vec!(message));//TODO: batch up history messages
-					Self::send_message(&sender, &history);
-				});
+
+		game.iter_event_history(|visible_event: &VisibleEvent|{
+			if self.auth_type.require_visibility(&visible_event.get_visibility()).is_err() {
+				return;
+			}
+			let message = Message::Event(visible_event.get_event());
+			let history = Message::History(vec!(message));//TODO: batch up history messages
+			Self::send_message(&sender, &history);
+		});
 
 		let empty_history = Message::History(vec!());//this marks the end of history messages
 		Self::send_message(&sender, &empty_history);
