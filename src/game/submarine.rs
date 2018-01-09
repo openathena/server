@@ -2,6 +2,7 @@ use hex_grid::*;
 use game::data::GameData;
 use std::time::Duration;
 use game::server_time::ServerTime;
+use events::SubmarineUpdated;
 
 #[derive(Clone)]
 pub struct Submarine {
@@ -33,10 +34,6 @@ impl Submarine {
 		self.coords
 	}
 
-	pub fn get_team_id(&self) -> String {
-		self.team_id.to_owned()
-	}
-
 	pub fn get_move_cooldown_end(&self) -> ServerTime {
 		self.move_cooldown_end.clone()
 	}
@@ -44,5 +41,15 @@ impl Submarine {
 	pub fn move_to(&mut self, dest: Coordinate, cooldown_time: ServerTime) {
 		self.coords = dest;
 		self.move_cooldown_end = cooldown_time;
+	}
+
+	pub fn get_updated_event(&self) -> SubmarineUpdated {
+		SubmarineUpdated {
+			x: self.coords.x,
+			y: self.coords.y,
+			submarine_id: self.id.clone(),
+			team_id: self.team_id.clone(),
+			move_cooldown: self.move_cooldown_end.get_millis(),
+		}
 	}
 }

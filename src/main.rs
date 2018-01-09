@@ -13,8 +13,6 @@ extern crate serde_json;
 extern crate validate;
 extern crate serde;
 extern crate hex_grid;
-extern crate task_scheduler;
-
 
 #[cfg(test)]
 mod test;

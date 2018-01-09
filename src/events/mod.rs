@@ -1,16 +1,12 @@
 pub mod team_created;
 pub mod tile_updated;
-pub mod submarine_created;
-pub mod submarine_moved;
-pub mod submarine_move_cooldown;
+pub mod submarine_updated;
 pub mod game_started;
 
 
 pub use self::team_created::TeamCreated;
 pub use self::tile_updated::TileUpdated;
-pub use self::submarine_created::SubmarineCreated;
-pub use self::submarine_moved::SubmarineMoved;
-pub use self::submarine_move_cooldown::SubmarineMoveCooldown;
+pub use self::submarine_updated::SubmarineUpdated;
 pub use self::game_started::GameStarted;
 
 use serde::Serialize;
