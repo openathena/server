@@ -8,6 +8,7 @@ pub struct SubmarineUpdated {
 	pub submarine_id: String,
 	pub team_id: String,
 	pub move_cooldown: u64,
+	pub health: u32
 }
 
 impl EventType for SubmarineUpdated {
