@@ -111,7 +111,7 @@ impl ws::Handler for Handler {
 	fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
 		let msg_text = msg.as_text()?;
 		if let Err(api_error) = self.handle_request(msg_text) {
-			let err_string = serde_json::to_string(&api_error.into_response()).unwrap();
+			let err_string = serde_json::to_string(&api_error).unwrap();
 			return self.sender.close_with_reason(ws::CloseCode::Policy, err_string);
 		}
 		Ok(())

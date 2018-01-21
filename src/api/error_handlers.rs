@@ -31,21 +31,19 @@ impl ApiErrorType {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct ApiError {
-	status: Status,
-	response: ErrorResponse
+	error_type: ApiErrorType,
+	description: String,
 }
 
 impl ApiError {
 	pub fn new(error_type: ApiErrorType, description: &str) -> ApiError {
 		ApiError {
-			status: error_type.get_status(),
-			response: ErrorResponse::new(error_type, description)
+			error_type,
+			description: description.to_owned(),
 		}
-	}
-	pub fn into_response(self) -> ErrorResponse {
-		self.response
 	}
 }
 
@@ -55,47 +53,25 @@ impl From<JsonError> for ApiError {
 	}
 }
 
-#[derive(Serialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct ErrorResponse {
-	error_type: ApiErrorType,
-	description: String
-}
-
-impl ErrorResponse {
-	pub fn new(error_type: ApiErrorType, description: &str) -> ErrorResponse {
-		ErrorResponse {
-			error_type,
-			description: description.to_owned()
-		}
-	}
-}
-
 impl<'r> Responder<'r> for ApiError {
 	fn respond_to(self, request: &Request) -> Result<Response<'r>, Status> {
-		CustomStatus(self.status, self.response).respond_to(request)
-	}
-}
-
-impl<'r> Responder<'r> for ErrorResponse {
-	fn respond_to(self, request: &Request) -> Result<Response<'r>, Status> {
-		Json(self).respond_to(request)
+		CustomStatus(self.error_type.get_status(), Json(self)).respond_to(request)
 	}
 }
 
 #[error(400)]
-fn catch400(_req: &Request) -> ErrorResponse {
-	ErrorResponse::new(ApiErrorType::BadRequest, "That's a bad request. That's all I can tell you right now.")
+fn catch400(_req: &Request) -> ApiError {
+	ApiError::new(ApiErrorType::BadRequest, "That's a bad request. That's all I can tell you right now.")
 }
 
 #[error(404)]
-fn catch404(_req: &Request) -> ErrorResponse {
-	ErrorResponse::new(ApiErrorType::NotFound, "The requested resource was not found.")
+fn catch404(_req: &Request) -> ApiError {
+	ApiError::new(ApiErrorType::NotFound, "The requested resource was not found.")
 }
 
 #[error(500)]
-fn catch500(_req: &Request) -> ErrorResponse {
-	ErrorResponse::new(ApiErrorType::InternalServerError, "I failed. I'll try harder next time")
+fn catch500(_req: &Request) -> ApiError {
+	ApiError::new(ApiErrorType::InternalServerError, "I failed. I'll try harder next time")
 }
 
 pub fn get_catchers() -> Vec<Catcher> {
