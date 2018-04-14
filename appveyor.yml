@@ -35,7 +35,7 @@ environment:
 # Install Rust and Cargo
 # (Based on from https://github.com/rust-lang/libc/blob/master/appveyor.yml)
 install:
-  - curl -sSf -o rustup-init.exe https://win.rustup.rs
+  - appveyor-retry appveyor DownloadFile https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-gnu/rustup-init.exe -FileName rustup-init.exe
   - rustup-init.exe --default-host %TARGET% --default-toolchain %CHANNEL% -y
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
   - rustc -Vv
