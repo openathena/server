@@ -1,6 +1,5 @@
 use ws::{self, Sender};
 use game::Game;
-use std::sync::{Arc, Mutex};
 use serde_json;
 use super::request::Request;
 use super::message::Message;
@@ -12,11 +11,11 @@ const PORT: u16 = 43202;
 
 
 pub struct Server {
-	game: Arc<Mutex<Game>>
+	game: Game
 }
 
 impl Server {
-	pub fn new(game: Arc<Mutex<Game>>) -> Server {
+	pub fn new(game: Game) -> Server {
 		Server { game }
 	}
 
@@ -29,27 +28,29 @@ impl Server {
 }
 
 struct Handler {
-	game: Arc<Mutex<Game>>,
+	game: Game,
 	auth_type: AuthType,
 	sender: Sender,
-	listener_id: Option<String>
+	listener_id: Option<String>,
 }
 
 impl Handler {
-	pub fn new(game: Arc<Mutex<Game>>, sender: Sender) -> Handler {
+	pub fn new(game: Game, sender: Sender) -> Handler {
 		Handler {
 			game,
 			auth_type: AuthType::Observer,
 			sender,
-			listener_id: None
+			listener_id: None,
 		}
 	}
 
 	fn shutdown_event_stream(&mut self) -> bool {
 		if let Some(team_id) = self.listener_id.take() {
-			self.game.lock().unwrap().remove_event_listener(&team_id);
+			self.game.modify_state(|state| {
+				state.remove_event_listener(&team_id);
+			});
 			true
-		}else{
+		} else {
 			false
 		}
 	}
@@ -64,10 +65,10 @@ impl Handler {
 		match request {
 			Request::Auth(auth_request) => {
 				let credentials = Some((auth_request.username.as_ref(), auth_request.password.as_ref()));
-				self.auth_type = self.game.lock().unwrap().auth(credentials)?;
+				self.auth_type = self.game.modify_state(|state| state.auth(credentials))?;
 			}
 			Request::Observe => {
-				self.auth_type = self.game.lock().unwrap().auth(None)?;
+				self.auth_type = self.game.modify_state(|state| state.auth(None))?;
 			}
 		}
 		self.setup_event_stream();
@@ -80,11 +81,9 @@ impl Handler {
 
 	fn setup_event_stream(&mut self) {
 		let sender = self.sender.clone();
-		let mut game = self.game.lock().unwrap();
-
 		//send all existing events as "History" messages
 
-		game.iter_event_history(|visible_event: &VisibleEvent|{
+		self.game.iter_event_history(|visible_event: &VisibleEvent| {
 			if self.auth_type.require_visibility(&visible_event.get_visibility()).is_err() {
 				return;
 			}
@@ -98,11 +97,13 @@ impl Handler {
 
 		//listen for all future events
 		let auth_type = self.auth_type.clone();
-		self.listener_id = Some(game.add_event_listener(move |event| {
-			if auth_type.require_visibility(&event.get_visibility()).is_ok() {
-				let message = Message::Event(event.get_event());
-				Self::send_message(&sender, &message);
-			}
+		self.listener_id = Some(self.game.modify_state(|state| {
+			state.add_event_listener(move |event| {
+				if auth_type.require_visibility(&event.get_visibility()).is_ok() {
+					let message = Message::Event(event.get_event());
+					Self::send_message(&sender, &message);
+				}
+			})
 		}));
 	}
 }

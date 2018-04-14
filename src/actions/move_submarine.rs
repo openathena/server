@@ -14,7 +14,9 @@ impl ActionDef for Definition {
 	fn execute(&self, request: Self::Request, game: &mut Game) -> Result<Self::Response, ApiError> {
 
 		//TODO: check auth from basic credentials, make sure auth'ed team can access submarine
-		let moved_time = game.move_submarine(request.submarine_id, (request.x, request.y))?;
+		let moved_time = game.modify_state(|state|{
+			state.move_submarine(request.submarine_id, (request.x, request.y))
+		})?;
 
 		Ok(Response {
 			move_cooldown: (moved_time + Submarine::move_cooldown()).get_millis(),

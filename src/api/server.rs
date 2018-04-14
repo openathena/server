@@ -1,15 +1,14 @@
-use std::sync::{Arc, Mutex};
 use rocket;
 use game::Game;
 use api::{error_handlers, route, cors};
 use actions::action_map;
 
 pub struct Server {
-	game: Arc<Mutex<Game>>
+	game: Game
 }
 
 impl Server {
-	pub fn new(game: Arc<Mutex<Game>>) -> Server {
+	pub fn new(game: Game) -> Server {
 		Server { game }
 	}
 	pub fn start(self) {

@@ -2,9 +2,9 @@ pub mod auth;
 pub mod team;
 pub mod submarine;
 pub mod server_time;
-pub mod data;
+pub mod state;
 
-use self::data::GameData;
+use self::state::GameState;
 use events::*;
 pub use self::team::Team;
 pub use self::auth::AuthType;
@@ -14,7 +14,7 @@ use hex_grid::*;
 use std::time::Instant;
 use self::server_time::ServerTime;
 use std::sync::{Arc, Mutex};
-use self::data::*;
+use self::state::*;
 
 impl State {
 	pub fn require_state(&self, state: State) -> Result<(), ApiError> {
@@ -27,14 +27,15 @@ impl State {
 	}
 }
 
+#[derive(Clone)]
 pub struct Game {
-	data: Arc<Mutex<GameData>>,
+	state: Arc<Mutex<GameState>>,
 }
 
 impl Game {
 	pub fn new() -> Game {
 		Game {
-			data: Arc::new(Mutex::new(GameData {
+			state: Arc::new(Mutex::new(GameState {
 				game_start: Instant::now(),
 				state: State::TeamCreation,
 				teams: HashMap::new(),
@@ -46,37 +47,14 @@ impl Game {
 		}
 	}
 
-	pub fn add_team(&mut self, team: Team) -> Result<(), ApiError> {
-		self.data.lock().unwrap().add_team(team)
-	}
-
-	pub fn auth(&self, credentials: Option<(&str, &str)>) -> Result<AuthType, ApiError> {
-		self.data.lock().unwrap().auth(credentials)
-	}
-
-	pub fn add_event_listener<F>(&mut self, listener: F) -> String
-		where F: FnMut(VisibleEvent) + Send + 'static {
-		self.data.lock().unwrap().add_event_listener(listener)
-	}
-
-	pub fn remove_event_listener(&mut self, id: &str) {
-		self.data.lock().unwrap().remove_event_listener(id)
+	pub fn modify_state<T, F: FnOnce(&mut GameState) -> T>(&self, func: F) -> T {
+		func(&mut self.state.lock().unwrap())
 	}
 
 	pub fn iter_event_history<F: FnMut(&VisibleEvent)>(&self, mut func: F) {
-		let data = self.data.lock().unwrap();
+		let data = self.state.lock().unwrap();
 		for event in &data.event_history {
 			func(&event)
 		}
-	}
-
-	pub fn start(&mut self) -> Result<(), ApiError> {
-		self.data.lock().unwrap().start()
-	}
-
-	pub fn move_submarine<C: Into<Coordinate>>(&mut self, sub_id: String, destination: C) -> Result<ServerTime, ApiError> {
-		let mut data = self.data.lock().unwrap();
-		let moved_time = data.move_submarine(sub_id.clone(), destination)?;
-		Ok(moved_time)
 	}
 }

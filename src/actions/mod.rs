@@ -11,13 +11,14 @@ use api::error_handlers::ApiError;
 use validate::Validate;
 use api::error_handlers::ApiErrorType;
 
+
 pub type ActionMap = HashMap<String, &'static Action>;
 
 pub fn action_list() -> Vec<&'static Action> {
 	vec![
 		&create_team::Definition,
 		&start_game::Definition,
-		&move_submarine::Definition
+		&move_submarine::Definition,
 	]
 }
 

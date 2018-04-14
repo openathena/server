@@ -1,5 +1,5 @@
 use hex_grid::*;
-use game::data::GameData;
+use game::state::GameState;
 use std::time::Duration;
 use game::server_time::ServerTime;
 use events::SubmarineUpdated;
@@ -10,6 +10,7 @@ pub struct Submarine {
 	coords: Coordinate,
 	team_id: String,
 	move_cooldown_end: ServerTime,
+	torpedo_cooldown_end: ServerTime,
 	health: u32,
 }
 
@@ -18,11 +19,12 @@ impl Submarine {
 
 	pub fn new<T: Into<Coordinate>>(coords: T, team_id: &str) -> Submarine {
 		Submarine {
-			id: GameData::generate_id(),
+			id: GameState::generate_id(),
 			coords: coords.into(),
 			team_id: team_id.to_owned(),
 			move_cooldown_end: ServerTime::zero(),
-			health: Self::STARTING_HEALTH
+			torpedo_cooldown_end: ServerTime::zero(),
+			health: Self::STARTING_HEALTH,
 		}
 	}
 

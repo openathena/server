@@ -10,7 +10,7 @@ impl ActionDef for Definition {
 	type Response = Response;
 
 	fn execute(&self, _request: Self::Request, game: &mut Game) -> Result<Self::Response, ApiError> {
-		game.start()?;
+		game.modify_state(|state| state.start())?;
 		Ok(Response {})
 	}
 }

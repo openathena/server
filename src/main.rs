@@ -27,12 +27,11 @@ use api::server::Server as ApiServer;
 use websocket::server::Server as WsServer;
 
 use game::Game;
-use std::sync::{Arc, Mutex};
 use std::thread;
 
 
 fn main() {
-	let game = Arc::new(Mutex::new(Game::new()));
+	let game = Game::new();
 
 	let api_thread = {
 		let game = game.clone();

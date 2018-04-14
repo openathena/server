@@ -1,4 +1,3 @@
-use std::sync::{Arc, Mutex};
 use websocket::server::Server;
 use std::thread;
 use game::Game;
@@ -34,7 +33,7 @@ impl ws::Handler for Handler {
 
 #[test]
 fn test() {
-	let game = Arc::new(Mutex::new(Game::new()));
+	let game = Game::new();
 
 	let (send, recv) = channel();
 

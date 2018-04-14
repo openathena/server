@@ -1,4 +1,4 @@
-use game::data::GameData;
+use game::state::GameState;
 
 #[derive(Clone)]
 pub struct Team {
@@ -10,7 +10,7 @@ pub struct Team {
 impl Team {
 	pub fn new(name: &str, password: &str) -> Team {
 		Team {
-			id: GameData::generate_id(),
+			id: GameState::generate_id(),
 			name: name.to_owned(),
 			password: password.to_owned(),
 		}

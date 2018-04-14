@@ -11,7 +11,7 @@ use events::*;
 use game::auth::*;
 use rand::{thread_rng, Rng};
 
-pub struct GameData {
+pub struct GameState {
 	pub game_start: Instant,
 	pub state: State,
 	pub teams: HashMap<String, Team>,
@@ -21,7 +21,7 @@ pub struct GameData {
 	pub submarines: HashMap<String, Submarine>,
 }
 
-impl GameData {
+impl GameState {
 	pub fn server_time(&self) -> ServerTime {
 		ServerTime::new(self.game_start.elapsed())
 	}
