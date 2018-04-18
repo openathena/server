@@ -1,6 +1,7 @@
 pub mod create_team;
 pub mod start_game;
 pub mod move_submarine;
+pub mod ping;
 
 use serde_json::Value;
 use serde_json;
@@ -19,6 +20,7 @@ pub fn action_list() -> Vec<&'static Action> {
 		&create_team::Definition,
 		&start_game::Definition,
 		&move_submarine::Definition,
+		&ping::Definition,
 	]
 }
 
